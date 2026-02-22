@@ -9,6 +9,76 @@ let isListening = false;
 let voiceTransaction = null;
 let currentLang = localStorage.getItem('voiceLang') || 'en-US';
 
+const seedTransactions = [
+    { id: 20260212001, date: '2026-02-12', type: 'expense', category: 'entertainment', description: 'aku habis top up game Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260212002, date: '2026-02-12', type: 'expense', category: 'entertainment', description: 'Battle pass Rp60.000', amount: 60000, method: 'voice' },
+    { id: 20260206001, date: '2026-02-06', type: 'income', category: 'other', description: 'Aku punya uang simpanan Rp800.000', amount: 800000, method: 'voice' },
+    { id: 20260206002, date: '2026-02-06', type: 'income', category: 'other', description: 'di dompet ada uang Rp300.000', amount: 300000, method: 'voice' },
+    { id: 20260206003, date: '2026-02-06', type: 'income', category: 'other', description: 'di bank ada uang rp14.776', amount: 14776, method: 'voice' },
+    { id: 20260206004, date: '2026-02-06', type: 'expense', category: 'food', description: 'aku habis beli sate Rp13.000', amount: 13000, method: 'voice' },
+    { id: 20260207001, date: '2026-02-07', type: 'expense', category: 'food', description: 'aku habis beli makan Rp10.000', amount: 10000, method: 'voice' },
+    { id: 20260207002, date: '2026-02-07', type: 'expense', category: 'food', description: 'aku habis beli nasi goreng Rp16.000', amount: 16000, method: 'voice' },
+    { id: 20260207003, date: '2026-02-07', type: 'expense', category: 'food', description: 'aku habis beli jajan Rp4.000', amount: 4000, method: 'voice' },
+    { id: 20260208001, date: '2026-02-08', type: 'expense', category: 'food', description: 'aku habis beli Aqua Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260208002, date: '2026-02-08', type: 'expense', category: 'other', description: 'habis beli jas hujan', amount: 21000, method: 'voice' },
+    { id: 20260208003, date: '2026-02-08', type: 'income', category: 'other', description: 'dapat uang Rp200.000', amount: 200000, method: 'voice' },
+    { id: 20260208004, date: '2026-02-08', type: 'expense', category: 'entertainment', description: 'beli tiket konser', amount: 200000, method: 'manual' },
+    { id: 20260208005, date: '2026-02-08', type: 'income', category: 'other', description: 'dapet tf 450k', amount: 450000, method: 'manual' },
+    { id: 20260208006, date: '2026-02-08', type: 'expense', category: 'food', description: 'beli Mizone', amount: 5000, method: 'voice' },
+    { id: 20260209001, date: '2026-02-09', type: 'expense', category: 'food', description: 'habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260209002, date: '2026-02-09', type: 'expense', category: 'entertainment', description: 'aku habis nongkrong Rp30.000', amount: 30000, method: 'voice' },
+    { id: 20260209003, date: '2026-02-09', type: 'income', category: 'other', description: 'aku dapat uang Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260210001, date: '2026-02-10', type: 'expense', category: 'food', description: 'aku habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260210002, date: '2026-02-10', type: 'expense', category: 'study', description: 'aku habis beli buku rp62.000', amount: 62000, method: 'voice' },
+    { id: 20260210003, date: '2026-02-10', type: 'expense', category: 'study', description: 'aku habis beli kertas folio', amount: 5000, method: 'voice' },
+    { id: 20260210004, date: '2026-02-10', type: 'expense', category: 'food', description: 'aku habis beli makan Rp16.000', amount: 16000, method: 'voice' },
+    { id: 20260210005, date: '2026-02-10', type: 'expense', category: 'other', description: 'aku habis ambil laundry Rp55.000', amount: 55000, method: 'voice' },
+    { id: 20260211001, date: '2026-02-11', type: 'expense', category: 'food', description: 'aku habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260211002, date: '2026-02-11', type: 'expense', category: 'food', description: 'aku habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260211003, date: '2026-02-11', type: 'expense', category: 'food', description: 'aku habis beli makan Rp13.000', amount: 13000, method: 'voice' },
+    { id: 20260211004, date: '2026-02-11', type: 'expense', category: 'food', description: 'aku habis beli susu Rp8.000', amount: 8000, method: 'voice' },
+    { id: 20260212003, date: '2026-02-12', type: 'expense', category: 'food', description: 'aku habis beli Aqua Rp3.000', amount: 3000, method: 'voice' },
+    { id: 20260212004, date: '2026-02-12', type: 'expense', category: 'food', description: 'aku habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260213001, date: '2026-02-13', type: 'expense', category: 'food', description: 'aku habis beli bakso rp17.000', amount: 17000, method: 'voice' },
+    { id: 20260213002, date: '2026-02-13', type: 'expense', category: 'food', description: 'aku habis beli makan Rp18.000', amount: 18000, method: 'voice' },
+    { id: 20260213003, date: '2026-02-13', type: 'expense', category: 'food', description: 'aku habis beli makan Rp13.000', amount: 13000, method: 'voice' },
+    { id: 20260214001, date: '2026-02-14', type: 'expense', category: 'food', description: 'aku beli makan Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260215001, date: '2026-02-15', type: 'expense', category: 'entertainment', description: 'aku habis nongkrong Rp10.000', amount: 10000, method: 'voice' },
+    { id: 20260215002, date: '2026-02-15', type: 'expense', category: 'food', description: 'habis beli makan Rp14.000', amount: 14000, method: 'voice' },
+    { id: 20260215003, date: '2026-02-15', type: 'expense', category: 'other', description: 'beli minum', amount: 5000, method: 'voice' },
+    { id: 20260215004, date: '2026-02-15', type: 'expense', category: 'food', description: 'aku habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260215005, date: '2026-02-15', type: 'expense', category: 'food', description: 'aku habis beli makan Rp12.000', amount: 12000, method: 'voice' },
+    { id: 20260215006, date: '2026-02-15', type: 'income', category: 'other', description: 'aku habis dapat transferan 800.000', amount: 800000, method: 'voice' },
+    { id: 20260215007, date: '2026-02-15', type: 'expense', category: 'food', description: 'aku habis beli jajan Rp5.000', amount: 5000, method: 'voice' },
+    { id: 20260215008, date: '2026-02-15', type: 'expense', category: 'study', description: 'habis member langganan beasiswa 149.000', amount: 149000, method: 'manual' },
+    { id: 20260215009, date: '2026-02-15', type: 'expense', category: 'shopping', description: 'aku habis bayar shopee 697.000', amount: 697000, method: 'voice' },
+    { id: 20260216001, date: '2026-02-16', type: 'expense', category: 'food', description: 'lagu Abel beli makan Rp35.000', amount: 35000, method: 'voice' },
+    { id: 20260216002, date: '2026-02-16', type: 'expense', category: 'food', description: 'aku habis beli makan Rp16.000', amount: 16000, method: 'voice' },
+    { id: 20260217001, date: '2026-02-17', type: 'expense', category: 'food', description: 'aku habis beli makan Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260218001, date: '2026-02-18', type: 'expense', category: 'food', description: 'aku habis beli jajan Rp16.000', amount: 16000, method: 'voice' },
+    { id: 20260218002, date: '2026-02-18', type: 'expense', category: 'food', description: 'aku habis beli makan Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260218003, date: '2026-02-18', type: 'expense', category: 'food', description: 'aku habis beli makan 32.000', amount: 32000, method: 'voice' },
+    { id: 20260218004, date: '2026-02-18', type: 'expense', category: 'other', description: 'aku habis ambil laundry Rp35.000', amount: 35000, method: 'voice' },
+    { id: 20260218005, date: '2026-02-18', type: 'expense', category: 'food', description: 'aku habis beli air dan jajan Rp10.000', amount: 10000, method: 'voice' },
+    { id: 20260220001, date: '2026-02-20', type: 'expense', category: 'food', description: 'aku habis beli es Rp5.000', amount: 5000, method: 'voice' },
+    { id: 20260220002, date: '2026-02-20', type: 'expense', category: 'food', description: 'aku habis beli makan Rp10.000', amount: 10000, method: 'voice' },
+    { id: 20260220003, date: '2026-02-20', type: 'expense', category: 'food', description: 'aku habis beli pentol Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260221001, date: '2026-02-21', type: 'expense', category: 'food', description: 'aku habis beli makan Rp20.000', amount: 20000, method: 'voice' },
+    { id: 20260221002, date: '2026-02-21', type: 'expense', category: 'food', description: 'aku habis beli es teh', amount: 3000, method: 'voice' },
+    { id: 20260221003, date: '2026-02-21', type: 'expense', category: 'food', description: 'aku habis beli pentol Rp9.000', amount: 9000, method: 'voice' },
+    { id: 20260222001, date: '2026-02-22', type: 'expense', category: 'food', description: 'aku habis makan sahur 27.000', amount: 27000, method: 'voice' },
+    { id: 20260222002, date: '2026-02-22', type: 'income', category: 'other', description: 'aku habis gajian', amount: 2000000, method: 'voice' }
+];
+
+function ensureSeedTransactions() {
+    const hasUserData = Array.isArray(transactions) && transactions.length > 0;
+    const seedApplied = localStorage.getItem('seedTransactionsApplied') === '1';
+    if (hasUserData || seedApplied) return;
+    transactions = seedTransactions.slice();
+    saveTransactions();
+    localStorage.setItem('seedTransactionsApplied', '1');
+}
+
 // NEW: Month/Year selection state
 let currentView = 'monthly'; // 'monthly' or 'alltime'
 let selectedMonth = new Date().getMonth();
@@ -55,6 +125,7 @@ function buildSheetDeletePayload(id) {
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
+    ensureSeedTransactions();
     setTodayDate();
     populateMonthYearSelectors();
     updateDashboards();
@@ -358,7 +429,7 @@ function toggleTheme() {
 }
 
 function loadTheme() {
-    const saved = localStorage.getItem('theme') || 'light';
+    const saved = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
     document.getElementById('themeToggle').textContent = saved === 'dark' ? '☀️' : '🌙';
 }
