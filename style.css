@@ -5,41 +5,60 @@
 }
 
 :root {
-    --bg-primary: #f8f9fa;
-    --bg-secondary: #ffffff;
-    --bg-card: #ffffff;
-    --text-primary: #2d3748;
-    --text-secondary: #718096;
-    --accent-primary: #667eea;
-    --accent-secondary: #764ba2;
-    --success: #48bb78;
-    --warning: #ed8936;
-    --danger: #f56565;
-    --border: #e2e8f0;
-    --shadow: rgba(0, 0, 0, 0.1);
+    --bg-primary: #0b0f14;
+    --bg-secondary: #101826;
+    --bg-card: rgba(20, 28, 42, 0.85);
+    --text-primary: #f8fafc;
+    --text-secondary: rgba(248, 250, 252, 0.72);
+    --accent-primary: #f97316;
+    --accent-secondary: #fbbf24;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --border: rgba(148, 163, 184, 0.22);
+    --shadow: rgba(0, 0, 0, 0.4);
+    --metal: #9ca3af;
+    --paper: #f5e6c8;
+    --font-title: "Bangers", system-ui;
+    --font-body: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 [data-theme="dark"] {
-    --bg-primary: #1a202c;
-    --bg-secondary: #2d3748;
-    --bg-card: #2d3748;
-    --text-primary: #f7fafc;
-    --text-secondary: #cbd5e0;
-    --accent-primary: #9f7aea;
-    --accent-secondary: #b794f4;
-    --success: #68d391;
-    --warning: #f6ad55;
-    --danger: #fc8181;
-    --border: #4a5568;
-    --shadow: rgba(0, 0, 0, 0.3);
+    --bg-primary: #070a0f;
+    --bg-secondary: #0b1220;
+    --bg-card: rgba(16, 23, 35, 0.88);
+    --text-primary: #f8fafc;
+    --text-secondary: rgba(248, 250, 252, 0.72);
+    --accent-primary: #fb923c;
+    --accent-secondary: #fde047;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --border: rgba(148, 163, 184, 0.2);
+    --shadow: rgba(0, 0, 0, 0.55);
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-primary);
+    font-family: var(--font-body);
+    background: radial-gradient(1200px 600px at 10% 0%, rgba(249, 115, 22, 0.22), transparent 55%),
+        radial-gradient(900px 600px at 90% 10%, rgba(251, 191, 36, 0.18), transparent 55%),
+        var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
     transition: background 0.3s, color 0.3s;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("images/naruto (12).jpg");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.08;
+    filter: saturate(1.05) contrast(1.05);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .container {
@@ -50,13 +69,14 @@ body {
 }
 
 header {
-    background: var(--bg-secondary);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.65), rgba(249, 115, 22, 0.18)), var(--bg-secondary);
     padding: 20px 0;
     box-shadow: 0 2px 10px var(--shadow);
     margin-bottom: 30px;
     position: sticky;
     top: 0;
     z-index: 100;
+    border-bottom: 1px solid rgba(251, 191, 36, 0.18);
 }
 
 .header-content {
@@ -70,6 +90,8 @@ header {
 
 h1 {
     font-size: 1.8rem;
+    font-family: var(--font-title);
+    letter-spacing: 1px;
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -91,11 +113,13 @@ h1 {
     font-size: 0.9rem;
     transition: all 0.3s;
     font-weight: 500;
+    backdrop-filter: blur(10px);
 }
 
 .theme-toggle:hover, .lang-toggle:hover {
     transform: scale(1.05);
     border-color: var(--accent-primary);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
 .lang-toggle.active {
@@ -116,6 +140,8 @@ h1 {
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
+    border: 1px solid rgba(251, 191, 36, 0.18);
+    backdrop-filter: blur(10px);
 }
 
 .month-selector-left {
@@ -164,6 +190,7 @@ h1 {
 
 .view-btn:hover {
     border-color: var(--accent-primary);
+    color: var(--text-primary);
 }
 
 .view-btn.active {
@@ -208,6 +235,47 @@ h1 {
     border-radius: 15px;
     box-shadow: 0 4px 15px var(--shadow);
     transition: transform 0.3s;
+    border: 1px solid rgba(251, 191, 36, 0.16);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.income-card::after,
+.expense-card::after,
+.net-card::after,
+.rate-card::after {
+    content: "";
+    position: absolute;
+    right: -12px;
+    bottom: -14px;
+    width: 120px;
+    height: 120px;
+    background-repeat: no-repeat;
+    background-position: right bottom;
+    background-size: contain;
+    opacity: 0.98;
+    pointer-events: none;
+    z-index: 0;
+    filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
+}
+
+.income-card::after { background-image: url("images/naruto__2_-removebg-preview.png"); }
+.expense-card::after { background-image: url("images/naruto__3_-removebg-preview.png"); }
+.net-card::after { background-image: url("images/naruto__5_-removebg-preview.png"); }
+.rate-card::after { background-image: url("images/naruto__6_-removebg-preview.png"); }
+
+.income-card::after,
+.rate-card::after {
+    width: 165px;
+    height: 165px;
+    right: -22px;
+    bottom: -24px;
 }
 
 .card:hover {
@@ -247,6 +315,7 @@ h1 {
     padding: 12px;
     border-radius: 10px;
     font-weight: 500;
+    border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .health-safe { background: rgba(72, 187, 120, 0.1); color: var(--success); }
@@ -255,13 +324,39 @@ h1 {
 
 /* Voice Section */
 .voice-section {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.95), rgba(0, 0, 0, 0.75));
     padding: 30px;
     border-radius: 15px;
     margin-bottom: 30px;
     text-align: center;
     color: white;
     box-shadow: 0 8px 20px var(--shadow);
+    border: 1px solid rgba(251, 191, 36, 0.22);
+    position: relative;
+    overflow: hidden;
+}
+
+.voice-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        url("images/naruto__1_-removebg-preview.png"),
+        url("images/naruto__10_-removebg-preview.png");
+    background-repeat: no-repeat;
+    background-size: 190px, 190px;
+    background-position:
+        left -34px top -18px,
+        right -34px top -18px;
+    opacity: 0.98;
+    pointer-events: none;
+    z-index: 1;
+    filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.5));
+}
+
+.voice-section > * {
+    position: relative;
+    z-index: 2;
 }
 
 .voice-language-badge {
@@ -286,6 +381,20 @@ h1 {
     cursor: pointer;
     transition: all 0.3s;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    padding: 0;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    outline: 2px solid rgba(251, 191, 36, 0.28);
+}
+
+.voice-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.08);
 }
 
 .voice-button:hover {
@@ -301,6 +410,10 @@ h1 {
     animation: pulse 1.5s infinite;
     background: var(--danger);
     color: white;
+}
+
+.voice-button.listening .voice-avatar {
+    filter: saturate(1.25) contrast(1.1);
 }
 
 @keyframes pulse {
@@ -354,6 +467,8 @@ h1 {
     border-radius: 15px;
     margin-bottom: 30px;
     box-shadow: 0 4px 15px var(--shadow);
+    border: 1px solid rgba(251, 191, 36, 0.16);
+    backdrop-filter: blur(10px);
 }
 
 .form-group {
@@ -378,6 +493,10 @@ input, select, textarea {
     transition: border 0.3s;
 }
 
+input::placeholder, textarea::placeholder {
+    color: rgba(248, 250, 252, 0.55);
+}
+
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--accent-primary);
@@ -399,6 +518,7 @@ button {
     font-size: 1rem;
     font-weight: 600;
     transition: all 0.3s;
+    letter-spacing: 0.2px;
 }
 
 button:hover {
@@ -429,6 +549,55 @@ button:hover {
     box-shadow: 0 4px 12px var(--shadow);
 }
 
+/* Analytics Charts */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.chart-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 15px;
+    padding: 16px;
+    box-shadow: 0 4px 15px var(--shadow);
+    backdrop-filter: blur(10px);
+}
+
+.chart-card--wide {
+    grid-column: 1 / -1;
+}
+
+.chart-card-title {
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 320px;
+}
+
+.chart-card--wide .chart-canvas-wrap {
+    height: 280px;
+}
+
+@media (max-width: 860px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+    .chart-card--wide {
+        grid-column: auto;
+    }
+    .chart-canvas-wrap {
+        height: 300px;
+    }
+}
+
 .btn-secondary {
     background: var(--bg-secondary);
     color: var(--text-primary);
@@ -443,6 +612,8 @@ button:hover {
     padding: 25px;
     border-radius: 15px;
     box-shadow: 0 4px 15px var(--shadow);
+    border: 1px solid rgba(251, 191, 36, 0.16);
+    backdrop-filter: blur(10px);
 }
 
 .transaction-item {
@@ -470,6 +641,7 @@ button:hover {
     margin-bottom: 5px;
     background: var(--bg-primary);
     color: var(--text-secondary);
+    border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .transaction-description {
@@ -541,6 +713,8 @@ button:hover {
     width: 90%;
     box-shadow: 0 10px 30px var(--shadow);
     animation: slideUp 0.3s;
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    backdrop-filter: blur(12px);
 }
 
 @keyframes slideUp {
@@ -564,6 +738,7 @@ button:hover {
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .confirm-item {
@@ -606,6 +781,8 @@ button:hover {
     border-left: 4px solid var(--accent-primary);
     font-style: italic;
     color: var(--text-secondary);
+    border: 1px solid rgba(251, 191, 36, 0.16);
+    backdrop-filter: blur(10px);
 }
 
 .hidden {
@@ -650,6 +827,8 @@ button:hover {
     border-radius: 15px;
     margin-bottom: 30px;
     box-shadow: 0 4px 15px var(--shadow);
+    border: 1px solid rgba(251, 191, 36, 0.16);
+    backdrop-filter: blur(10px);
 }
 
 @media (max-width: 768px) {
