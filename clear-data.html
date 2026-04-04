@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hapus Data Keuangan</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            display: block;
+            width: 100%;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        .success {
+            background: #28a745;
+        }
+        .success:hover {
+            background: #218838;
+        }
+        .warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .warning:hover {
+            background: #e0a800;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .data-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #007bff;
+        }
+        .data-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Hapus Data Keuangan</h1>
+        <p>Halaman ini akan menghapus semua data keuangan yang pernah Anda masukkan:</p>
+        
+        <div class="data-list">
+            <strong>Data yang akan dihapus:</strong>
+            <div class="data-item">💰 Semua transaksi (pemasukan/pengeluaran)</div>
+            <div class="data-item">💳 Data anggaran/budget per kategori</div>
+            <div class="data-item">📊 Data sample/contoh transaksi</div>
+            <div class="data-item">🎤 Pengaturan bahasa voice input</div>
+            <div class="data-item">🌙 Tema tampilan</div>
+        </div>
+        
+        <button onclick="clearFinancialData()">� Hapus Data Keuangan Saja</button>
+        <button onclick="clearAllData()" class="warning">�️ Hapus Semua Data</button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+            <h3>📊 Data Saat Ini:</h3>
+            <div id="currentData">Memuat data...</div>
+        </div>
+    </div>
+
+    <script>
+        function showStatus(message, isSuccess = true) {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.style.background = isSuccess ? '#d4edda' : '#f8d7da';
+            status.style.color = isSuccess ? '#155724' : '#721c24';
+            status.textContent = message;
+        }
+
+        function showCurrentData() {
+            const dataDiv = document.getElementById('currentData');
+            const transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+            const budgets = JSON.parse(localStorage.getItem('budgets')) || {};
+            const seedApplied = localStorage.getItem('seedTransactionsApplied') === '1';
+            
+            let html = '';
+            
+            // Transaksi
+            html += `<div class="data-item">📝 <strong>Transaksi:</strong> ${transactions.length} transaksi</div>`;
+            if (transactions.length > 0) {
+                const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+                const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+                html += `<div class="data-item">💵 Total Pemasukan: Rp ${totalIncome.toLocaleString('id-ID')}</div>`;
+                html += `<div class="data-item">💸 Total Pengeluaran: Rp ${totalExpense.toLocaleString('id-ID')}</div>`;
+            }
+            
+            // Budget
+            const budgetCount = Object.keys(budgets).length;
+            html += `<div class="data-item">💳 <strong>Budget:</strong> ${budgetCount} kategori</div>`;
+            if (budgetCount > 0) {
+                Object.entries(budgets).forEach(([cat, amount]) => {
+                    html += `<div class="data-item">  • ${cat}: Rp ${amount.toLocaleString('id-ID')}</div>`;
+                });
+            }
+            
+            // Status lain
+            html += `<div class="data-item">📊 Sample Data: ${seedApplied ? 'Sudah terpasang' : 'Belum terpasang'}</div>`;
+            
+            dataDiv.innerHTML = html || '<div class="data-item">Tidak ada data tersimpan</div>';
+        }
+
+        function clearFinancialData() {
+            if (confirm('Yakin ingin menghapus semua data keuangan? Transaksi dan budget akan hilang permanen.')) {
+                localStorage.removeItem('transactions');
+                localStorage.removeItem('budgets');
+                localStorage.removeItem('seedTransactionsApplied');
+                showStatus('✅ Data keuangan berhasil dihapus!');
+                setTimeout(showCurrentData, 500);
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('PERINGATAN! Ini akan menghapus SEMUA data termasuk pengaturan. Tidak bisa dibatalkan!')) {
+                localStorage.clear();
+                showStatus('✅ Semua data berhasil dihapus!');
+                setTimeout(showCurrentData, 500);
+            }
+        }
+
+        // Load current data when page opens
+        showCurrentData();
+    </script>
+</body>
+</html>
