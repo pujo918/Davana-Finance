@@ -16,7 +16,7 @@ let selectedMonth = new Date().getMonth();
 let selectedYear = new Date().getFullYear();
 
 function sendToSheet(data) {
-    fetch("https://script.google.com/macros/s/AKfycbyJbgKWPlUOdg64Vo95EXlVK1CgJBSw-3QJGmoJ14Pg0hGuUjhuY3mN-NVi4HTbfjsj/exec", {
+    fetch("https://script.google.com/macros/s/AKfycbzxIIMWGVhFB6ruGNvWfHsldSv7te1bzKnySyyn8GwZZEx5Hotq1Fe5UjfIHaeOAGXK/exec", {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
