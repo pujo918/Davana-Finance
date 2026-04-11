@@ -1,26 +1,14 @@
 // ========== APP STATE ==========
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-let budgets = JSON.parse(localStorage.getItem('budgets')) || {};
-let recognition;
-let isListening = false;
-let voiceTransaction = null;
-let currentLang = localStorage.getItem('voiceLang') || 'en-US';
+var transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+var budgets = JSON.parse(localStorage.getItem('budgets')) || {
+    food: 500000, transport: 300000, bills: 500000, study: 400000,
+    entertainment: 200000, shopping: 300000, health: 200000, other: 200000
+};
 
 let expenseCategoryChart;
 let monthlyExpenseChart;
 let incomeExpenseChart;
 let savingRateChart;
-
-const seedTransactions = [];
-
-function ensureSeedTransactions() {
-    const hasUserData = Array.isArray(transactions) && transactions.length > 0;
-    const seedApplied = localStorage.getItem('seedTransactionsApplied') === '1';
-    if (hasUserData || seedApplied) return;
-    transactions = seedTransactions.slice();
-    saveTransactions();
-    localStorage.setItem('seedTransactionsApplied', '1');
-}
 
 // NEW: Month/Year selection state
 let currentView = 'monthly'; // 'monthly' or 'alltime'
@@ -68,22 +56,17 @@ function buildSheetDeletePayload(id) {
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
-    ensureSeedTransactions();
     setTodayDate();
     populateMonthYearSelectors();
     updateDashboards();
     renderTransactions();
-    if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
-    initVoiceRecognition();
-    renderBudgetForm();
+        renderBudgetForm();
     showDailyQuote();
     initEventListeners();
     updateLangButton();
-    updateVoiceSuggestions();
-});
+    });
 
 function initEventListeners() {
-    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     document.getElementById('langToggle').addEventListener('click', toggleLanguage);
     document.getElementById('voiceButton').addEventListener('click', toggleVoiceInput);
     
@@ -109,6 +92,7 @@ function initEventListeners() {
         updateDashboards();
         renderTransactions();
         updatePeriodLabels();
+        if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
     });
     
     document.getElementById('yearSelect').addEventListener('change', function() {
@@ -116,7 +100,182 @@ function initEventListeners() {
         updateDashboards();
         renderTransactions();
         updatePeriodLabels();
+        if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
     });
+
+    const importMergeBtn = document.getElementById('importMergeBtn');
+    const importReplaceBtn = document.getElementById('importReplaceBtn');
+    const importClearBtn = document.getElementById('importClearBtn');
+    if (importMergeBtn && importReplaceBtn && importClearBtn) {
+        importMergeBtn.addEventListener('click', () => importTransactionsFromText(false));
+        importReplaceBtn.addEventListener('click', () => importTransactionsFromText(true));
+        importClearBtn.addEventListener('click', () => {
+            const box = document.getElementById('importData');
+            const status = document.getElementById('importStatus');
+            if (box) box.value = '';
+            if (status) status.textContent = '';
+        });
+    }
+}
+
+function setImportStatus(msg, isError = false) {
+    const el = document.getElementById('importStatus');
+    if (!el) return;
+    el.style.color = isError ? 'var(--danger)' : 'var(--text-secondary)';
+    el.textContent = msg;
+}
+
+function parseAmountFlexible(raw) {
+    if (raw === null || raw === undefined) return 0;
+    let s = String(raw).trim();
+    if (!s) return 0;
+    s = s.replace(/\s+/g, '');
+    s = s.replace(/rp/gi, '');
+    if (!s) return 0;
+
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if (hasComma && hasDot) {
+        s = s.replace(/\./g, '').replace(/,/g, '.');
+    } else if (hasComma && !hasDot) {
+        const lastComma = s.lastIndexOf(',');
+        const decimals = s.length - lastComma - 1;
+        if (decimals === 0) {
+            s = s.replace(/,/g, '');
+        } else if (decimals <= 2) {
+            s = s.replace(/,/g, '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else {
+        s = s.replace(/\./g, '');
+    }
+
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? Math.round(n) : 0;
+}
+
+function parseDateFlexible(raw) {
+    if (!raw) return '';
+    const s = String(raw).trim();
+    if (!s) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+        const mm = String(parseInt(m[1], 10)).padStart(2, '0');
+        const dd = String(parseInt(m[2], 10)).padStart(2, '0');
+        const yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const dt = new Date(s);
+    if (!Number.isNaN(dt.getTime())) return dt.toISOString().split('T')[0];
+    return '';
+}
+
+function normalizeHeader(h) {
+    return String(h || '')
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '')
+        .replace(/[^a-z]/g, '');
+}
+
+function splitRow(line) {
+    const t = String(line || '').trim();
+    if (!t) return [];
+    if (t.includes('\t')) return t.split('\t');
+    if (t.includes(',')) return t.split(',');
+    return t.split(/\s{2,}/);
+}
+
+function importTransactionsFromText(replaceAll) {
+    const box = document.getElementById('importData');
+    if (!box) return;
+    const raw = String(box.value || '').trim();
+    if (!raw) {
+        setImportStatus('Paste data first.', true);
+        return;
+    }
+
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+        setImportStatus('Need header + at least 1 row.', true);
+        return;
+    }
+
+    const headers = splitRow(lines[0]).map(h => normalizeHeader(h));
+    if (headers.length === 0) {
+        setImportStatus('Header not detected.', true);
+        return;
+    }
+
+    const idx = {
+        id: headers.indexOf('id'),
+        date: headers.indexOf('date'),
+        type: headers.indexOf('type'),
+        category: headers.indexOf('category'),
+        description: headers.indexOf('description'),
+        amount: headers.indexOf('amount'),
+        source: headers.indexOf('source')
+    };
+
+    const required = ['date', 'type', 'category', 'amount'];
+    for (const k of required) {
+        if (idx[k] === -1) {
+            setImportStatus(`Missing column: ${k}`, true);
+            return;
+        }
+    }
+
+    const parsed = [];
+    for (let i = 1; i < lines.length; i++) {
+        const cols = splitRow(lines[i]);
+        if (cols.length === 0) continue;
+
+        const idRaw = idx.id >= 0 ? cols[idx.id] : '';
+        const dateRaw = cols[idx.date];
+        const typeRaw = cols[idx.type];
+        const catRaw = cols[idx.category];
+        const descRaw = idx.description >= 0 ? cols[idx.description] : '';
+        const amtRaw = cols[idx.amount];
+        const srcRaw = idx.source >= 0 ? cols[idx.source] : '';
+
+        const date = parseDateFlexible(dateRaw);
+        const amount = parseAmountFlexible(amtRaw);
+        const type = String(typeRaw || '').toLowerCase().trim();
+        const category = String(catRaw || '').toLowerCase().trim();
+        const description = String(descRaw || '').trim();
+        const method = String(srcRaw || '').toLowerCase().trim() === 'voice' ? 'voice' : 'manual';
+
+        if (!date || !type || !category || !amount) continue;
+        if (type !== 'income' && type !== 'expense') continue;
+
+        let id = Number(idRaw);
+        if (!Number.isFinite(id) || id <= 0) id = Date.now() + i;
+
+        parsed.push({ id, date, type, category, description, amount, method });
+    }
+
+    if (parsed.length === 0) {
+        setImportStatus('No valid rows parsed. Check column order and formats.', true);
+        return;
+    }
+
+    if (replaceAll) {
+        if (!confirm('Replace ALL transactions with imported data?')) return;
+        transactions = parsed.sort((a, b) => b.id - a.id);
+    } else {
+        const map = new Map(transactions.map(t => [String(t.id), t]));
+        for (const t of parsed) map.set(String(t.id), t);
+        transactions = Array.from(map.values()).sort((a, b) => b.id - a.id);
+    }
+
+    saveTransactions();
+    updateDashboards();
+    renderTransactions();
+    setImportStatus(`Imported ${parsed.length} transactions (${replaceAll ? 'replaced' : 'merged'}).`);
 }
 
 // ========== MONTH/YEAR SELECTORS ==========
@@ -168,6 +327,7 @@ function switchView(view) {
     updateDashboards();
     renderTransactions();
     updatePeriodLabels();
+    if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
 }
 
 // ========== DASHBOARDS UPDATE ==========
@@ -298,7 +458,7 @@ function handleFormSubmit(e) {
     const transaction = {
         id: Date.now(),
         type: document.getElementById('type').value,
-        amount: parseFloat(document.getElementById('amount').value),
+        amount: window.getUnformattedValue('amount'),
         category: document.getElementById('category').value,
         date: document.getElementById('date').value,
         description: document.getElementById('description').value,
@@ -309,6 +469,7 @@ function handleFormSubmit(e) {
     saveTransactions();
     updateDashboards();
     renderTransactions();
+    if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
 
     sendToSheet(buildSheetPayload(transaction));
     
@@ -375,13 +536,13 @@ function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme');
     const newTheme = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    localStorage.setItem('colorTheme', newTheme);
     document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
     if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
 }
 
 function loadTheme() {
-    const saved = localStorage.getItem('theme') || 'dark';
+    const saved = localStorage.getItem('colorTheme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
     document.getElementById('themeToggle').textContent = saved === 'dark' ? '☀️' : '🌙';
 }
@@ -392,161 +553,14 @@ function switchTab(tabName, clickedTab) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     clickedTab.classList.add('active');
     document.getElementById(tabName + 'Tab').classList.add('active');
-    if (tabName === 'analytics') renderAnalytics();
-}
-
-// ========== VOICE (Same as before) ==========
-function initVoiceRecognition() {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        document.getElementById('voiceStatus').textContent = '❌ Voice not supported';
-        document.getElementById('voiceButton').disabled = true;
-        return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 5;
-    recognition.lang = currentLang;
-
-    recognition.onstart = () => {
-        document.getElementById('voiceStatus').textContent = '🎤 Listening...';
-        document.getElementById('voiceResult').innerHTML = '<div style="opacity: 0.7;">Processing...</div>';
-    };
-
-    recognition.onresult = (event) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const res = event.results[i];
-            const best = res && res[0] ? res[0].transcript : '';
-            if (res.isFinal) {
-                finalTranscript += best + ' ';
-            } else {
-                interimTranscript += best + ' ';
-            }
-        }
-
-        const transcript = (finalTranscript + interimTranscript).trim();
-        if (!transcript) return;
-
-        document.getElementById('voiceResult').innerHTML = `
-            <div style="margin-bottom: 8px;"><strong>Heard:</strong> "${transcript}"</div>
-            <div style="font-size: 0.85rem; opacity: 0.8;">${finalTranscript.trim() ? 'Parsing...' : 'Listening...'}</div>
-        `;
-
-        if (finalTranscript.trim()) {
-            setTimeout(() => parseVoiceInput(finalTranscript.trim()), 150);
-        }
-    };
-
-    recognition.onerror = (event) => {
-        let msg = 'Could not understand. Try again.';
-        if (event.error === 'no-speech') msg = 'No speech detected.';
-        document.getElementById('voiceStatus').textContent = msg;
-        document.getElementById('voiceResult').innerHTML = `<div style="color: var(--warning);">${msg}</div>`;
-        stopVoiceInput();
-    };
-
-    recognition.onend = () => stopVoiceInput();
-}
-
-function toggleVoiceInput() {
-    if (isListening) {
-        recognition.stop();
-    } else {
-        recognition.start();
-        isListening = true;
-        document.getElementById('voiceButton').classList.add('listening');
-    }
-}
-
-function stopVoiceInput() {
-    isListening = false;
-    document.getElementById('voiceButton').classList.remove('listening');
-    document.getElementById('voiceStatus').textContent = 'Tap to start';
-}
-
-function simulateVoice(text) {
-    document.getElementById('voiceResult').innerHTML = `
-        <div style="margin-bottom: 8px;"><strong>Testing:</strong> "${text}"</div>
-        <div style="font-size: 0.85rem; opacity: 0.8;">Parsing...</div>
-    `;
-    setTimeout(() => parseVoiceInput(text), 300);
-}
-
-function parseVoiceInput(text) {
-    const parsed = parser.parse(text);
-    document.getElementById('voiceResult').innerHTML = `
-        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; line-height: 1.8;">
-            <strong>Parsed:</strong><br>
-            💰 Rp ${parsed.amount.toLocaleString('id-ID')}<br>
-            📊 ${parsed.type === 'income' ? '✅ Income' : '❌ Expense'}<br>
-            📁 ${getCategoryEmoji(parsed.category)} ${parsed.category}<br>
-            📅 ${formatDate(parsed.date)}<br>
-            📝 ${parsed.description}
-        </div>
-    `;
-
-    if (parsed.amount === 0) {
-        document.getElementById('voiceResult').innerHTML += `
-            <div style="background: rgba(237, 137, 54, 0.3); margin-top: 10px; padding: 12px; border-radius: 8px; color: white;">
-                ⚠️ No amount detected!<br>
-                <small>Try: "25k" or "dua puluh ribu"</small>
-            </div>
-        `;
-        return;
-    }
-
-    voiceTransaction = {
-        type: parsed.type,
-        amount: parsed.amount,
-        category: parsed.category,
-        date: parsed.date,
-        description: parsed.description,
-        method: 'voice'
-    };
-
-    showConfirmModal();
-}
-
-// ========== MODAL ==========
-function showConfirmModal() {
-    document.getElementById('confirmType').innerHTML = 
-        voiceTransaction.type === 'income' 
-            ? '<span style="color: var(--success);">✅ Income</span>' 
-            : '<span style="color: var(--danger);">❌ Expense</span>';
-    document.getElementById('confirmAmount').textContent = `Rp ${voiceTransaction.amount.toLocaleString('id-ID')}`;
-    document.getElementById('confirmCategory').innerHTML = `${getCategoryEmoji(voiceTransaction.category)} ${voiceTransaction.category}`;
-    document.getElementById('confirmDate').textContent = formatDate(voiceTransaction.date);
-    document.getElementById('confirmDescription').textContent = voiceTransaction.description;
-    document.getElementById('confirmModal').classList.add('active');
-}
-
-function closeConfirmModal() {
-    document.getElementById('confirmModal').classList.remove('active');
-    voiceTransaction = null;
-}
-
-function saveVoiceTransaction() {
-    if (voiceTransaction && voiceTransaction.amount > 0) {
-        const txn = { id: Date.now(), ...voiceTransaction };
-        transactions.unshift(txn);
-        saveTransactions();
-        updateDashboards();
+    if (tabName === 'transactions') {
+        updatePeriodLabels();
         renderTransactions();
-        if (document.getElementById('analyticsTab')?.classList.contains('active')) renderAnalytics();
-
-        sendToSheet(buildSheetPayload(txn));
-        closeConfirmModal();
-        document.getElementById('voiceResult').innerHTML = `
-            <div style="background: rgba(72, 187, 120, 0.3); padding: 15px; border-radius: 8px; color: white;">
-                <strong>✓ Saved!</strong>
-            </div>
-        `;
-        setTimeout(() => { document.getElementById('voiceResult').innerHTML = ''; }, 3000);
+    }
+    if (tabName === 'analytics') renderAnalytics();
+    if (tabName === 'budget') {
+        if (typeof updateBudgetStatus === 'function') updateBudgetStatus();
+        if (typeof renderBudgetForm === 'function') renderBudgetForm();
     }
 }
 
@@ -861,7 +875,7 @@ function renderBudgetForm() {
     container.innerHTML = cats.map(cat => `
         <div class="form-group">
             <label>${getCategoryEmoji(cat)} ${cat.charAt(0).toUpperCase() + cat.slice(1)}</label>
-            <input type="number" value="${budgets[cat]}" onchange="updateBudget('${cat}', this.value)">
+            <input type="text" inputmode="numeric" value="${Number(budgets[cat] || 0).toLocaleString('id-ID')}" oninput="formatCurrencyInput(event)" onchange="updateBudget('${cat}', this.value)">
             <div id="budget-${cat}-status" style="margin-top: 8px; font-size: 0.9rem;"></div>
         </div>
     `).join('');
@@ -870,7 +884,7 @@ function renderBudgetForm() {
 }
 
 function updateBudget(category, value) {
-    budgets[category] = parseInt(value) || 0;
+    budgets[category] = parseInt(String(value).replace(/[^0-9]/g, '')) || 0;
     localStorage.setItem('budgets', JSON.stringify(budgets));
     updateBudgetStatus();
 }
@@ -905,13 +919,22 @@ function updateBudgetStatus() {
 
 // ========== HELPERS ==========
 function showDailyQuote() {
-    const quotes = [
-        "Track smart, spend wise!",
-        "Monthly reflection helps growth!",
-        "Financial awareness = Freedom!",
-        "You're doing great!",
-        "Small steps, big savings!"
-    ];
+    const imageTheme = localStorage.getItem('theme') || 'naruto';
+    const quotes = imageTheme === 'onepiece'
+        ? [
+            "Set sail, track every berry!",
+            "Build your treasure, one step at a time!",
+            "Navigate your budget like a captain!",
+            "Keep your crew budget battle-ready!",
+            "Grand goals start from daily discipline!"
+        ]
+        : [
+            "Track smart, spend wise!",
+            "Monthly reflection helps growth!",
+            "Financial awareness = Freedom!",
+            "You're doing great!",
+            "Small steps, big savings!"
+        ];
     document.getElementById('dailyQuote').textContent = `"${quotes[Math.floor(Math.random() * quotes.length)]}"`;
 }
 
